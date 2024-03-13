@@ -1,0 +1,136 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+    ElasticSubnet:
+      Type: String
+      Default: ''
+      Description: The ID of the subnet to launch the EC2 instance into. Ensure this subnet has internet access.
+      
+    ElasticVPC:
+      Type: String
+      Default: ''
+      Description: The ID of the VPC where the EC2 instance will be deployed.
+      
+    ElasticCustomDomainURL:
+      Description: Provide the publicly routable custom domain URL for accessing the Elasticsearch dashboard.
+      Type: String
+      
+    ElasticEndpoint:
+      Description: Provide the endpoint URL for Elasticsearch service.
+      Type: String
+      
+    ElasticClusterID:
+      Description: Provide the Elasticsearch cluster ID.
+      Type: String
+      
+    KibanaCustomDomainURL:
+      Description: Provide the publicly routable custom domain URL for accessing the Kibana dashboard.
+      Type: String
+      
+    KibanaEndpoint:
+      Description: Provide the endpoint URL for Kibana.
+      Type: String
+      
+    KibanaComponentID:
+      Description: Provide the Kibana Component ID.
+      Type: String
+      
+    AnonymousAccess:
+      Description: Do you want to allow pre-signed access to the Kibana dashboard? Select 'Yes' if desired.
+      AllowedValues:
+        - 'Yes'
+        - 'No'
+      Default: 'No'
+      Type: String
+      
+    DashboardPreloggedInCustomDomainURL:
+      Description: Provide the publicly routable custom domain URL for accessing pre-logged-in Kibana dashboard.
+      Type: String
+      Default: ''
+      
+    UserName:
+      Description: Specify the username for accessing the Elasticsearch deployment.Required only if AnonymousAccess is set to 'Yes'.
+      Type: String
+      Default: ''
+      
+    Password:
+      Description: Specify the password for accessing the Elasticsearch deployment.Required only if AnonymousAccess is set to 'Yes'.
+      Type: String
+      NoEcho: true
+      Default: ''
+
+Resources:
+  ElasticAgentLambdaRolePolicy:     # IAM Policy for Elastic Agent Lambda Execution Role.
+    Type: 'AWS::IAM::Policy'
+    Properties: 
+      PolicyName: "ElasticAgentLambdaRolePolicy"
+      PolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - Effect: "Allow"
+            Action:
+            - "cloudformation:CreateStack"
+            - "ec2:*"
+            - "ssm:PutParameter"
+            - "s3:PutObject"
+            Resource: "*" 
+      Roles: 
+        - Ref: "ElasticAgentLambdaExecutionRole"
+              
+  ElasticAgentLambdaExecutionRole:      # IAM Role for execution of Elastic Agent Lambda function.
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - Effect: "Allow"
+            Principal: 
+              Service: 
+              - "lambda.amazonaws.com"
+            Action: 
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+  
+  ElasticProxyLambda:      # Serverless function responsible for creating EC2 instance with user
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: !Sub Elastic-BootStrap-Lambda-${AWS::AccountId}-${AWS::Region}
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt ElasticAgentLambdaExecutionRole.Arn
+      Runtime: python3.9
+      Timeout: 900
+      MemorySize: 128
+      CodeUri:
+        Bucket: elastic-proxy-test-bucket
+        Key: ezyzip.zip
+      Environment:
+        Variables:
+          ElasticSubnet: !Ref ElasticSubnet
+          ElasticVPC: !Ref ElasticVPC
+          ElasticCustomDomainURL: !Ref ElasticCustomDomainURL
+          ElasticEndpoint: !Ref ElasticEndpoint
+          ElasticClusterID: !Ref ElasticClusterID
+          KibanaCustomDomainURL: !Ref KibanaCustomDomainURL
+          KibanaEndpoint: !Ref KibanaEndpoint
+          KibanaComponentID: !Ref KibanaComponentID
+          AnonymousAccess: !Ref AnonymousAccess
+          DashboardPreloggedInCustomDomainURL: !Ref DashboardPreloggedInCustomDomainURL
+          UserName: !If
+            - !Equals [!Ref AnonymousAccess, "Yes"]
+            - !Ref UserName
+            - ''
+          Password: !If
+            - !Equals [!Ref AnonymousAccess, "Yes"]
+            - !Ref Password
+            - ''
+          
+  TriggersElasticAgentLambdaFunction:       # Custom resource to trigger the execution of the Elastic Prxoy Lambda function.
+    Type: 'Custom::RunCode'
+    DeletionPolicy: Retain
+    DependsOn: ElasticProxyLambda
+    Properties:
+      ServiceToken: !GetAtt ElasticProxyLambda.Arn
+          
