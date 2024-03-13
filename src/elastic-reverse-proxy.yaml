@@ -74,11 +74,12 @@ Resources:
             - "ec2:*"
             - "ssm:PutParameter"
             - "s3:PutObject"
+            - "s3:GetObject"
             Resource: "*" 
       Roles: 
-        - Ref: "ElasticAgentLambdaExecutionRole"
+        - Ref: "ElasticProxyLambdaExecutionRole"
               
-  ElasticAgentLambdaExecutionRole:      # IAM Role for execution of Elastic Agent Lambda function.
+  ElasticProxyLambdaExecutionRole:      # IAM Role for execution of Elastic Agent Lambda function.
     Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument: 
@@ -99,15 +100,16 @@ Resources:
     Properties:
       FunctionName: !Sub Elastic-BootStrap-Lambda-${AWS::AccountId}-${AWS::Region}
       Handler: lambda_function.lambda_handler
-      Role: !GetAtt ElasticAgentLambdaExecutionRole.Arn
+      Role: !GetAtt ElasticProxyLambdaExecutionRole.Arn
       Runtime: python3.9
       Timeout: 900
       MemorySize: 128
       CodeUri:
         Bucket: elastic-proxy-test-bucket
-        Key: ezyzip.zip
+        Key: Elastic-Proxy/ElasticProxy.zip
       Environment:
         Variables:
+          REGION: ${AWS::Region}
           ElasticSubnet: !Ref ElasticSubnet
           ElasticVPC: !Ref ElasticVPC
           ElasticCustomDomainURL: !Ref ElasticCustomDomainURL
