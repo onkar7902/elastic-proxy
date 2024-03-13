@@ -12,6 +12,11 @@
             "Default": "",
             "Description": "The ID of the VPC for the security group"
         },
+        "AMIID": {
+            "Type": "String",
+            "Default": "",
+            "Description": "Specifies the AMI ID of the base Amazon Machine Image for the EC2 instance where the Elastic Agent will be installed. Provide a valid AMI ID to ensure the correct configuration of the EC2 environment."
+        },
         "ElasticCustomURL": {
             "Description": "Custom URL for Elasticsearch",
             "Type": "String"
@@ -106,7 +111,9 @@
         "ElasticEC2ProxyInstance": {
             "Type": "AWS::EC2::Instance",
             "Properties": {
-                "ImageId": "ami-07d9b9ddc6cd8dd30",
+                "ImageId": {
+                    "Ref": "AMIID"
+                },
                 "InstanceType": "t2.micro",
                 "SecurityGroupIds": [
                     {
