@@ -201,10 +201,10 @@
                                 "export DashboardPreloggedInCustomDomainURL=$DashboardPreloggedInCustomDomainURL \n",
                                 "export UserName=$UserName \n",
                                 "export Password=$Password \n",
-                                "wget https://elastic-proxy.s3.amazonaws.com/proxy-script.sh \n",
-                                "sed -i -e ''s/\r$//'' proxy-script.sh \n",
-                                "chmod +x proxy-script.sh \n",
-                                "bash proxy-script.sh \n"
+                                "wget https://raw.githubusercontent.com/onkar7902/elastic-proxy/main/src/elastic-proxy.sh \n",
+                                "sed -i -e ''s/\r$//'' elastic-proxy.sh \n",
+                                "chmod +x elastic-proxy.sh \n",
+                                "bash elastic-proxy.sh \n"
                             ]
                         ]
                     }
