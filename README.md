@@ -6,7 +6,7 @@
 1. [Solution Overview](#solution-overview)
 2. [Prerequisites](#prerequisites)
 3. [Deployment Steps](#deployment-steps)
-4. [Deployment Overview and Resource Configuration Details](#deployment-overview)
+4. [Deployment Overview and Resource Configuration Details](#deployment-overview-and-resource-configuration-details)
 5. [Post Deployment Steps](#post-deployment-steps)
 
 
