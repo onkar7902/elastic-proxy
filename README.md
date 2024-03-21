@@ -119,7 +119,7 @@ To deploy the elastic-cloud-reverse-proxy application via AWS Serverless Applica
 1. Monitor the deployment progress in the AWS CloudFormation console and check if all the resources are successfully deployed.
 
 
-## Deployment Overview and Resource Configuration Details:
+## Deployment Overview and Resource Configuration Details
 
 The ***elastic-cloud-reverse-proxy*** application orchestrates the deployment of an AWS Lambda function. This Lambda function, in turn, creates a supplementary stack responsible for provisioning the following resources:
 
