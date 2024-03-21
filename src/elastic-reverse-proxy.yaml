@@ -2,25 +2,25 @@ AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 
 Parameters:
-    ElasticSubnet:
+    ElasticEC2SubnetID:
       Type: String
       Default: ''
       Description: The ID of the subnet to launch the EC2 instance into. Ensure this subnet has internet access.
       
-    ElasticVPC:
+    ElasticEC2VPCID:
       Type: String
       Default: ''
       Description: The ID of the VPC where the EC2 instance will be deployed.
       
-    ElasticCustomDomainURL:
+    ElasticSearchCustomDomainURL:
       Description: Provide the publicly routable custom domain URL for accessing the Elasticsearch dashboard.
       Type: String
       
-    ElasticEndpoint:
+    ElasticsearchEndpoint:
       Description: Provide the endpoint URL for Elasticsearch service.
       Type: String
       
-    ElasticClusterID:
+    ElasticsearchClusterID:
       Description: Provide the Elasticsearch cluster ID.
       Type: String
       
@@ -36,7 +36,7 @@ Parameters:
       Description: Provide the Kibana Component ID.
       Type: String
       
-    AnonymousAccess:
+    KibanaAnonymousAccess:
       Description: Do you want to allow pre-signed access to the Kibana dashboard? Select 'Yes' if desired.
       AllowedValues:
         - 'Yes'
@@ -44,21 +44,85 @@ Parameters:
       Default: 'No'
       Type: String
       
-    DashboardPreloggedInCustomDomainURL:
+    KibanaPreloggedInDashboardCustomDomainURL:
       Description: Provide the publicly routable custom domain URL for accessing pre-logged-in Kibana dashboard.
       Type: String
       Default: ''
       
-    UserName:
-      Description: Specify the username for accessing the Elasticsearch deployment.Required only if AnonymousAccess is set to 'Yes'.
+    ElasticsearchUsername:
+      Description: Specify the username for accessing the Elasticsearch deployment.Required only if KibanaAnonymousAccess is set to 'Yes'.
       Type: String
       Default: ''
       
-    Password:
-      Description: Specify the password for accessing the Elasticsearch deployment.Required only if AnonymousAccess is set to 'Yes'.
+    ElasticsearchPassword:
+      Description: Specify the password for accessing the Elasticsearch deployment.Required only if KibanaAnonymousAccess is set to 'Yes'.
       Type: String
       NoEcho: true
       Default: ''
+
+Conditions:
+  IsKibanaAnonymousAccess: !Equals [!Ref KibanaAnonymousAccess, "Yes"]
+  
+Mappings:
+  AMIID:
+    af-south-1: 
+      ami: ami-0579cc204825dd78a
+    ap-east-1:
+      ami: ami-047c2b27e29f3093e
+    ap-northeast-1:
+      ami: ami-00247e9dc9591c233
+    ap-northeast-2:
+      ami: ami-0382ac14e5f06eb95
+    ap-northeast-3:
+      ami: ami-0e3b138e5b9b100af
+    ap-south-1:
+      ami: ami-03bb6d83c60fc5f7c
+    ap-south-2:
+      ami: ami-0183d80552093ddaf
+    ap-southeast-1:
+      ami: ami-0123c9b6bfb7eb962
+    ap-southeast-2:
+      ami: ami-0d6f74b9139d26bf1
+    ap-southeast-3:
+      ami: ami-0b14a3ad70ead7235
+    ap-southeast-4:
+      ami: ami-03d8e5045971c30b8
+    ca-west-1:
+      ami: ami-0e8d86970420d328b
+    ca-central-1:
+      ami: ami-0c777892a9bc2e481
+    eu-central-1:
+      ami: ami-04dfd853d88e818e8
+    eu-central-2:
+      ami: ami-0047ae4d115d25c8a
+    eu-south-1:
+      ami: ami-084a59e7796306f59
+    eu-south-2:
+      ami: ami-0a3c51f6e32b1fb78
+    eu-north-1:
+      ami: ami-00381a880aa48c6c6
+    eu-west-1:
+      ami: ami-0d940f23d527c3ab1
+    eu-west-2:
+      ami: ami-0d18e50ca22537278
+    eu-west-3:
+      ami: ami-01b32e912c60acdfa
+    me-south-1: 
+      ami: ami-0e01027ae8e4b1a6a
+    me-central-1: 
+      ami: ami-0b7c0b92a7027b0d1
+    il-central-1:
+      ami: ami-06b23b0111e771393
+    sa-east-1: 
+      ami: ami-07871d79cd57217f5
+    us-east-1: 
+      ami: ami-07d9b9ddc6cd8dd30
+    us-east-2:
+      ami: ami-0f5daaa3a7fb3378b
+    us-west-1: 
+      ami: ami-0a0409af1cb831414
+    us-west-2:
+      ami: ami-08f7912c15ca96832
 
 Resources:
   ElasticAgentLambdaRolePolicy:     # IAM Policy for Elastic Agent Lambda Execution Role.
@@ -95,38 +159,42 @@ Resources:
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
   
-  ElasticProxyLambda:      # Serverless function responsible for creating EC2 instance with user
+  ElasticProxyLambda:      # Serverless function responsible for creating EC2 instance with user data
     Type: 'AWS::Serverless::Function'
     Properties:
-      FunctionName: !Sub Elastic-BootStrap-Lambda-${AWS::AccountId}-${AWS::Region}
       Handler: lambda_function.lambda_handler
       Role: !GetAtt ElasticProxyLambdaExecutionRole.Arn
       Runtime: python3.9
       Timeout: 900
       MemorySize: 128
       CodeUri:
-        Bucket: elastic-proxy-test-bucket
-        Key: Elastic-Proxy/ElasticProxy.zip
+        Bucket: ${CHANGE TO YOUR Bucket Name}
+        Key: ${CHANGE TO YOUR Zip File Path}
       Environment:
         Variables:
-          REGION: ${AWS::Region}
-          ElasticSubnet: !Ref ElasticSubnet
-          ElasticVPC: !Ref ElasticVPC
-          ElasticCustomDomainURL: !Ref ElasticCustomDomainURL
-          ElasticEndpoint: !Ref ElasticEndpoint
-          ElasticClusterID: !Ref ElasticClusterID
+          AMIID: 
+            !FindInMap 
+              - AMIID
+              - !Ref 'AWS::Region'
+              - ami
+          REGION: !Sub ${AWS::Region}
+          ElasticSubnet: !Ref ElasticEC2SubnetID
+          ElasticVPC: !Ref ElasticEC2VPCID
+          ElasticCustomDomainURL: !Ref ElasticSearchCustomDomainURL
+          ElasticEndpoint: !Ref ElasticsearchEndpoint
+          ElasticClusterID: !Ref ElasticsearchClusterID
           KibanaCustomDomainURL: !Ref KibanaCustomDomainURL
           KibanaEndpoint: !Ref KibanaEndpoint
           KibanaComponentID: !Ref KibanaComponentID
-          AnonymousAccess: !Ref AnonymousAccess
-          DashboardPreloggedInCustomDomainURL: !Ref DashboardPreloggedInCustomDomainURL
+          AnonymousAccess: !Ref KibanaAnonymousAccess
+          DashboardPreloggedInCustomDomainURL: !Ref KibanaPreloggedInDashboardCustomDomainURL
           UserName: !If
-            - !Equals [!Ref AnonymousAccess, "Yes"]
-            - !Ref UserName
+            - IsKibanaAnonymousAccess
+            - !Ref ElasticsearchUsername
             - ''
           Password: !If
-            - !Equals [!Ref AnonymousAccess, "Yes"]
-            - !Ref Password
+            - IsKibanaAnonymousAccess
+            - !Ref ElasticsearchPassword
             - ''
           
   TriggersElasticAgentLambdaFunction:       # Custom resource to trigger the execution of the Elastic Prxoy Lambda function.
